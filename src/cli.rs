@@ -1,4 +1,10 @@
 use clap::{Args, Parser, Subcommand, ValueEnum, builder::PossibleValue};
+
+#[cfg(not(debug_assertions))]
+use clap_verbosity_flag::InfoLevel;
+
+#[cfg(debug_assertions)]
+use clap_verbosity_flag::TraceLevel;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Parser)]
@@ -9,8 +15,13 @@ use serde::{Deserialize, Serialize};
     name = "nico"
 )]
 pub struct Cli {
+    #[cfg(debug_assertions)]
     #[command(flatten)]
-    pub verbosity: clap_verbosity_flag::Verbosity,
+    pub verbosity: clap_verbosity_flag::Verbosity<TraceLevel>,
+
+    #[cfg(not(debug_assertions))]
+    #[command(flatten)]
+    pub verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
 
     #[command(subcommand)]
     pub operation: Operations,
@@ -41,6 +52,15 @@ pub struct InitArgs {
     /// Comin flake URL
     #[arg(long, default_value_t = String::from("github:nlewo/comin"))]
     pub comin_url: String,
+
+    /// List of git remotes for this project. Only HTTP/HTTPS remotes will be added to the comin config.
+    /// If no remotes are provided and --local-git isn't set, the remotes will be set from an existing git repository (Error if none exists.)
+    #[arg(long = "remote", short, conflicts_with = "local_git")]
+    pub remotes: Vec<String>,
+
+    /// Create a local git repository in the target folder. This is not supported, but is useful for testing.
+    #[arg(long = "local-git", conflicts_with = "remotes")]
+    pub local_git: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]

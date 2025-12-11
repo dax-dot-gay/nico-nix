@@ -18,7 +18,29 @@ pub enum Error {
     Json(Arc<serde_json::Error>),
 
     #[error("Failed to render template: {0}")]
-    TemplateRendering(Arc<handlebars::RenderError>)
+    TemplateRendering(Arc<handlebars::RenderError>),
+
+    #[error("Missing runtime dependency: {0}")]
+    MissingRuntimeDependency(String),
+
+    #[error("Git operation error: {0}")]
+    Git(Arc<git2::Error>),
+
+    #[error("Invalid URL (\"{url}\"): {reason}")]
+    InvalidUrl {
+        url: String,
+        reason: String
+    }
+}
+
+impl Error {
+    pub fn dependency(which: impl Into<String>) -> Self {
+        Self::MissingRuntimeDependency(which.into())
+    }
+
+    pub fn url(url: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self::InvalidUrl { url: url.into(), reason: reason.into() }
+    }
 }
 
 macro_rules! from {
@@ -36,5 +58,6 @@ from!(clap::Error, Parsing);
 from!(anyhow::Error, Unknown);
 from!(std::io::Error, Io);
 from!(handlebars::RenderError, TemplateRendering);
+from!(git2::Error, Git);
 
 pub type Result<T> = std::result::Result<T, Error>;

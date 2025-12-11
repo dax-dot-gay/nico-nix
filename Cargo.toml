@@ -9,6 +9,7 @@ clap = { version = "4.5.53", features = ["cargo", "derive", "env", "string"] }
 clap-verbosity-flag = { version = "3.0.4", features = ["serde"] }
 clap_complete = "4.5.61"
 env_logger = { version = "0.11.8", features = ["kv"] }
+git2 = "0.20.3"
 handlebars = "6.3.2"
 include_directory = { version = "0.1.1", features = ["glob", "metadata"] }
 inquire = "0.9.1"

@@ -4,6 +4,6 @@
 }:
 
 {
-  packages = [ pkgs.git ];
+  packages = [ pkgs.git pkgs.openssl ];
   languages.rust.enable = true;
 }

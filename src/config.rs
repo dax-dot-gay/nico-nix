@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
 use std::{
-    fs,
-    path::{Path, PathBuf},
+    clone, fs, path::{Path, PathBuf}
 };
 
 use serde::{Deserialize, Serialize};
@@ -17,6 +16,7 @@ pub struct InitConfig {
     pub system: String,
     pub sops_url: String,
     pub comin_url: String,
+    pub git_remote: String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -33,13 +33,61 @@ pub struct Resources {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum GitRemote {
+    Local { name: String, url: String },
+    Http { name: String, url: String },
+    Ssh { name: String, url: String },
+    Git { name: String, url: String }
+}
+
+impl GitRemote {
+    pub fn parse(name: impl AsRef<str>, uri: impl AsRef<str>) -> crate::Result<Self> {
+        let name = name.as_ref().to_string();
+        let url = uri.as_ref().to_string();
+
+        if !url.trim_end_matches("/").ends_with(".git") {
+            return Err(crate::Error::url(url, "Git URLs should end with .git"));
+        }
+
+        Ok(if url.starts_with("https://") || url.starts_with("http://") {
+            Self::Http { name, url }
+        } else if url.starts_with("ssh://") || url.starts_with("rsync://") || name.contains("@") {
+            Self::Ssh { name, url }
+        } else if url.starts_with("git://") {
+            Self::Git { name, url }
+        } else {
+            Self::Local { name, url }
+        })
+    }
+
+    pub fn url(&self) -> String {
+        match self {
+            GitRemote::Local { url, .. } => url.clone(),
+            GitRemote::Http { url, .. } => url.clone(),
+            GitRemote::Ssh { url, .. } => url.clone(),
+            GitRemote::Git { url, .. } => url.clone(),
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            GitRemote::Local { name, .. } => name.clone(),
+            GitRemote::Http { name, .. } => name.clone(),
+            GitRemote::Ssh { name, .. } => name.clone(),
+            GitRemote::Git { name, .. } => name.clone(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Configuration {
     pub init: InitConfig,
     pub resources: Resources,
 }
 
 impl Configuration {
-    pub fn new(root: PathBuf, init: InitArgs) -> crate::Result<Self> {
+    pub fn new(root: PathBuf, init: InitArgs, remote: String) -> crate::Result<Self> {
         let new_config = Self {
             init: InitConfig {
                 description: init.description.clone(),
@@ -47,6 +95,7 @@ impl Configuration {
                 system: init.system.clone(),
                 sops_url: init.sops_url.clone(),
                 comin_url: init.comin_url.clone(),
+                git_remote: remote
             },
             resources: Resources::default(),
         };

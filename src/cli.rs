@@ -28,6 +28,26 @@ pub struct Cli {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Args)]
+#[group(required = false, multiple = false)]
+pub struct InitGitArgs {
+    /// Initialize a local repository, mostly just for testing
+    /// This isn't really applicable to the end product, but may be useful for initial setup.
+    #[arg(long = "git-local")]
+    pub local: bool,
+
+    /// Clone an existing git repository and add it as a remote.
+    /// This does not currently support any authentication.
+    #[arg(long = "git-clone")]
+    pub clone: Option<String>,
+
+    /// Use an existing git repository in the target directory.
+    /// Any existing remotes will be automatically detected and added.
+    /// This is the default behaviour if nothing else is selected.
+    #[arg(long = "git-existing")]
+    pub existing: bool
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Args)]
 pub struct InitArgs {
     /// Path of directory to initialize in, or the current directory if blank.
     /// If the target directory or its parents don't exist, they will be created.
@@ -53,14 +73,8 @@ pub struct InitArgs {
     #[arg(long, default_value_t = String::from("github:nlewo/comin"))]
     pub comin_url: String,
 
-    /// List of git remotes for this project. Only HTTP/HTTPS remotes will be added to the comin config.
-    /// If no remotes are provided and --local-git isn't set, the remotes will be set from an existing git repository (Error if none exists.)
-    #[arg(long = "remote", short, conflicts_with = "local_git")]
-    pub remotes: Vec<String>,
-
-    /// Create a local git repository in the target folder. This is not supported, but is useful for testing.
-    #[arg(long = "local-git", conflicts_with = "remotes")]
-    pub local_git: Option<String>
+    #[command(flatten)]
+    pub git: InitGitArgs
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]

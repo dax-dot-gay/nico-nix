@@ -1,13 +1,48 @@
 #![allow(dead_code)]
 
 use std::{
-    fs, path::{Path, PathBuf}
+    collections::HashMap, fs, path::{Path, PathBuf}
 };
 
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{cli::InitArgs, context::Context};
+
+#[derive(Serialize, Deserialize, Clone, Debug, Builder)]
+pub struct GitRemote {
+    #[builder(start_fn, into)]
+    pub name: String,
+
+    #[builder(start_fn, into)]
+    pub url: String,
+
+    #[builder(default = "main".to_string(), into)]
+    pub main_branch: String,
+
+    #[builder(default = "testing-".to_string(), into)]
+    pub testing_branch_prefix: String,
+
+    #[builder(default = 60)]
+    pub polling_period: u64,
+
+    #[builder(default = 300)]
+    pub timeout: u64
+}
+
+impl GitRemote {
+    pub fn as_nix(&self) -> String {
+        handlebars::Handlebars::new().render_template("{
+            name = \"{{name}}\";
+            url = \"{{url}}\";
+            branches.main.name = \"{{main_branch}}\";
+            branches.testing.name = \"{{testing_branch_prefix}}${config.services.comin.hostname}\";
+            poller.period = {{polling_period}};
+            timeout = {{timeout}};
+        }", &self).expect("Failed to render remote into nix config.")
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InitConfig {
@@ -15,8 +50,7 @@ pub struct InitConfig {
     pub nix: String,
     pub system: String,
     pub sops_url: String,
-    pub comin_url: String,
-    pub remotes: Vec<GitRemote>
+    pub comin_url: String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -30,78 +64,7 @@ pub struct ExtraFlake {
 pub struct Resources {
     pub extra_flakes: Vec<ExtraFlake>,
     pub dev_packages: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(tag = "kind", rename_all = "lowercase")]
-pub enum GitRemote {
-    Local { name: String, url: String },
-    Http { name: String, url: String },
-    Ssh { name: String, url: String },
-    Git { name: String, url: String }
-}
-
-impl GitRemote {
-    pub fn parse(name: impl AsRef<str>, uri: impl AsRef<str>) -> crate::Result<Self> {
-        let name = name.as_ref().to_string();
-        let url = uri.as_ref().to_string();
-
-        if !url.trim_end_matches("/").ends_with(".git") {
-            return Err(crate::Error::url(url, "Git URLs should end with .git"));
-        }
-
-        Ok(if url.starts_with("https://") || url.starts_with("http://") {
-            Self::Http { name, url }
-        } else if url.starts_with("ssh://") || url.starts_with("rsync://") || name.contains("@") {
-            Self::Ssh { name, url }
-        } else if url.starts_with("git://") {
-            Self::Git { name, url }
-        } else {
-            Self::Local { name, url }
-        })
-    }
-
-    pub fn url(&self) -> String {
-        match self {
-            GitRemote::Local { url, .. } => url.clone(),
-            GitRemote::Http { url, .. } => url.clone(),
-            GitRemote::Ssh { url, .. } => url.clone(),
-            GitRemote::Git { url, .. } => url.clone(),
-        }
-    }
-
-    pub fn name(&self) -> String {
-        match self {
-            GitRemote::Local { name, .. } => name.clone(),
-            GitRemote::Http { name, .. } => name.clone(),
-            GitRemote::Ssh { name, .. } => name.clone(),
-            GitRemote::Git { name, .. } => name.clone(),
-        }
-    }
-
-    pub fn as_local(&self) -> Option<(String, String)> {
-        if let Self::Local { name, url } = self.clone() {
-            Some((name, url))
-        } else { None }
-    }
-
-    pub fn as_http(&self) -> Option<(String, String)> {
-        if let Self::Http { name, url } = self.clone() {
-            Some((name, url))
-        } else { None }
-    }
-
-    pub fn as_git(&self) -> Option<(String, String)> {
-        if let Self::Git { name, url } = self.clone() {
-            Some((name, url))
-        } else { None }
-    }
-
-    pub fn as_ssh(&self) -> Option<(String, String)> {
-        if let Self::Ssh { name, url } = self.clone() {
-            Some((name, url))
-        } else { None }
-    }
+    pub remotes: HashMap<String, GitRemote>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -112,6 +75,8 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn new(root: PathBuf, init: InitArgs, remotes: Vec<GitRemote>) -> crate::Result<Self> {
+        let mut resources = Resources::default();
+        resources.remotes = remotes.into_iter().map(|r| (r.name.clone(), r)).collect();
         let new_config = Self {
             init: InitConfig {
                 description: init.description.clone(),
@@ -119,9 +84,8 @@ impl Configuration {
                 system: init.system.clone(),
                 sops_url: init.sops_url.clone(),
                 comin_url: init.comin_url.clone(),
-                remotes
             },
-            resources: Resources::default(),
+            resources: resources,
         };
         new_config.save(root)?;
         Ok(new_config)

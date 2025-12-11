@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+bon = "3.8.1"
 clap = { version = "4.5.53", features = ["cargo", "derive", "env", "string"] }
 clap-verbosity-flag = { version = "3.0.4", features = ["serde"] }
 clap_complete = "4.5.61"

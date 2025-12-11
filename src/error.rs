@@ -24,22 +24,12 @@ pub enum Error {
     MissingRuntimeDependency(String),
 
     #[error("Git operation error: {0}")]
-    Git(Arc<git2::Error>),
-
-    #[error("Invalid URL (\"{url}\"): {reason}")]
-    InvalidUrl {
-        url: String,
-        reason: String
-    }
+    Git(Arc<git2::Error>)
 }
 
 impl Error {
     pub fn dependency(which: impl Into<String>) -> Self {
         Self::MissingRuntimeDependency(which.into())
-    }
-
-    pub fn url(url: impl Into<String>, reason: impl Into<String>) -> Self {
-        Self::InvalidUrl { url: url.into(), reason: reason.into() }
     }
 }
 

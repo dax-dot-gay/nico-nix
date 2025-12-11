@@ -6,6 +6,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{cli::InitArgs, context::Context};
 
@@ -33,7 +34,6 @@ pub struct Resources {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Configuration {
-    root_directory: PathBuf,
     pub init: InitConfig,
     pub resources: Resources,
 }
@@ -41,7 +41,6 @@ pub struct Configuration {
 impl Configuration {
     pub fn new(root: PathBuf, init: InitArgs) -> crate::Result<Self> {
         let new_config = Self {
-            root_directory: root,
             init: InitConfig {
                 description: init.description.clone(),
                 nix: init.nix.clone(),
@@ -51,16 +50,8 @@ impl Configuration {
             },
             resources: Resources::default(),
         };
-        new_config.save()?;
+        new_config.save(root)?;
         Ok(new_config)
-    }
-
-    pub fn config_file(&self) -> PathBuf {
-        self.root_directory.join("nico.config.json")
-    }
-
-    pub fn root_directory(&self) -> PathBuf {
-        self.root_directory.clone()
     }
 
     pub fn load() -> crate::Result<Self> {
@@ -88,16 +79,33 @@ impl Configuration {
             Err(context.error(clap::error::ErrorKind::ValueValidation, format!("The supplied configuration file (must be either a directory containing `nico.config.json` or an existing `nico.config.json` file.")))
         })?.canonicalize()?;
         let deserialized = serde_json::from_str::<Self>(&fs::read_to_string(config_path.clone())?)?;
-        if deserialized.config_file() == config_path {
-            Ok(deserialized)
-        } else {
-            Err(crate::Error::ConfigDirectoryMismatch)
-        }
+        Ok(deserialized)
     }
 
-    pub fn save(&self) -> crate::Result<()> {
+    pub fn save(&self, directory: impl AsRef<Path>) -> crate::Result<()> {
         let serialized = serde_json::to_string_pretty(&self)?;
-        fs::write(self.config_file(), serialized)?;
+        fs::write(directory.as_ref().join("nico.config.json"), serialized)?;
         Ok(())
+    }
+
+    pub fn render_flake(&self, context: Context) -> crate::Result<String> {
+        let extra_flakes = ""; // TODO: Flake management
+        let dev_packages = ""; // TODO: Extra dev pkgs
+
+        let data = json!({
+           "init": {
+                "description": self.init.description.clone(),
+                "nix": self.init.nix.clone(),
+                "sops_url": self.init.sops_url.clone(),
+                "comin_url": self.init.comin_url.clone(),
+                "system": self.init.system.clone()
+           },
+           "resources": {
+                "extra_flakes": extra_flakes,
+                "dev_packages": dev_packages
+           }
+        });
+
+        context.render_template("flake/root.nix", &data)
     }
 }

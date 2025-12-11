@@ -17,10 +17,8 @@ pub enum Error {
     #[error("JSON error: {0}")]
     Json(Arc<serde_json::Error>),
 
-    #[error(
-        "Configuration reported a configuration directory different from the one it's in. The configuration must be manually corrected."
-    )]
-    ConfigDirectoryMismatch,
+    #[error("Failed to render template: {0}")]
+    TemplateRendering(Arc<handlebars::RenderError>)
 }
 
 macro_rules! from {
@@ -37,5 +35,6 @@ from!(serde_json::Error, Json);
 from!(clap::Error, Parsing);
 from!(anyhow::Error, Unknown);
 from!(std::io::Error, Io);
+from!(handlebars::RenderError, TemplateRendering);
 
 pub type Result<T> = std::result::Result<T, Error>;

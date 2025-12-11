@@ -1,0 +1,38 @@
+{
+  description = "{{init.description}}";
+  inputs = {
+    nixpkgs.url = "nixpkgs/nixos-{{init.nix}}";
+    sops-nix = {
+      url = "{{init.sops_url}}";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    comin = {
+      url = "{{init.comin_url}}";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    #! {{resources.extra_flakes}}
+  };
+
+  outputs =
+    {
+      self,
+      nixpkgs,
+      sops-nix,
+      comin,
+      ...
+    }@inputs:
+    let
+      system = "{{init.system}}";
+      pkgs = import nixpkgs { inherit system; };
+    in
+    {
+      nixosConfigurations = { };
+      devShells.${system}.default = pkgs.mkShell {
+        packages = [
+          pkgs.age
+          pkgs.sops
+          #! {{resources.dev_packages}}
+        ];
+      };
+    };
+}

@@ -11,12 +11,13 @@ pub trait Dispatcher {
 }
 
 mod completions;
+mod init;
 
 pub fn dispatch(context: Context) -> crate::Result<()> {
     match context.operation.clone() {
         Operations::Completions(args) => {
-            completions::CompletionsDispatcher::dispatch(context.clone(), args)
+            completions::CompletionsDispatcher::dispatch(context, args)
         }
-        _ => unimplemented!(),
+        Operations::Init(args) => init::InitDispatcher::dispatch(context, args)
     }
 }

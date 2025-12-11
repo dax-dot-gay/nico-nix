@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand, ValueEnum, builder::PossibleValue};
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +20,7 @@ pub struct Cli {
 pub struct InitArgs {
     /// Path of directory to initialize in, or the current directory if blank.
     /// If the target directory or its parents don't exist, they will be created.
-    pub path: Option<PathBuf>,
+    pub path: Option<String>,
 
     /// Flake description
     #[arg(short, long = "desc", default_value_t = String::from("Automatically generated config flake."))]

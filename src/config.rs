@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::{
-    clone, fs, path::{Path, PathBuf}
+    fs, path::{Path, PathBuf}
 };
 
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub struct InitConfig {
     pub system: String,
     pub sops_url: String,
     pub comin_url: String,
-    pub git_remote: String
+    pub remotes: Vec<GitRemote>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -78,6 +78,30 @@ impl GitRemote {
             GitRemote::Git { name, .. } => name.clone(),
         }
     }
+
+    pub fn as_local(&self) -> Option<(String, String)> {
+        if let Self::Local { name, url } = self.clone() {
+            Some((name, url))
+        } else { None }
+    }
+
+    pub fn as_http(&self) -> Option<(String, String)> {
+        if let Self::Http { name, url } = self.clone() {
+            Some((name, url))
+        } else { None }
+    }
+
+    pub fn as_git(&self) -> Option<(String, String)> {
+        if let Self::Git { name, url } = self.clone() {
+            Some((name, url))
+        } else { None }
+    }
+
+    pub fn as_ssh(&self) -> Option<(String, String)> {
+        if let Self::Ssh { name, url } = self.clone() {
+            Some((name, url))
+        } else { None }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -87,7 +111,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new(root: PathBuf, init: InitArgs, remote: String) -> crate::Result<Self> {
+    pub fn new(root: PathBuf, init: InitArgs, remotes: Vec<GitRemote>) -> crate::Result<Self> {
         let new_config = Self {
             init: InitConfig {
                 description: init.description.clone(),
@@ -95,7 +119,7 @@ impl Configuration {
                 system: init.system.clone(),
                 sops_url: init.sops_url.clone(),
                 comin_url: init.comin_url.clone(),
-                git_remote: remote
+                remotes
             },
             resources: Resources::default(),
         };

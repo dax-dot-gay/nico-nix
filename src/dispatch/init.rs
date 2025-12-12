@@ -10,7 +10,7 @@ use git2::{
     build::{CheckoutBuilder, RepoBuilder},
 };
 use log::*;
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, process::Command};
 
 fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, Vec<GitRemote>, Repository)> {
     let target_folder = args
@@ -116,9 +116,12 @@ impl Dispatcher for InitDispatcher {
 
         let rendered = config.render_flake(context.clone())?;
         fs::write(target_folder.join("flake.nix"), rendered)?;
+        fs::write(target_folder.join(".envrc"), "use flake")?;
 
         repo.add_files(["."])?;
         repo.create_commit("Nico initialization")?;
+
+        Command::new("direnv").arg("allow").arg(target_folder.join(".envrc")).output()?;
 
         Ok(())
     }

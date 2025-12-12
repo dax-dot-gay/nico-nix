@@ -45,6 +45,7 @@ fn main() -> Result<()> {
 
         let _nix_version = ensure_dependency("nix", ["--version"])?;
         let _git_version = ensure_dependency("git", ["--version"])?;
+        let _direnv_version = ensure_dependency("direnv", ["version"])?;
         dispatch::dispatch(ctx)
     } else {
         Ok(())

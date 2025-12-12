@@ -105,7 +105,7 @@ impl Configuration {
         }
     }
 
-    pub fn load_path(context: Context, path: impl AsRef<Path>) -> crate::Result<Self> {
+    pub fn load_path(path: impl AsRef<Path>) -> crate::Result<Self> {
         let path = path.as_ref();
         let config_path = (if path.is_dir() && path.join("nico.config.json").exists() {
             Ok(path.join("nico.config.json"))
@@ -113,7 +113,7 @@ impl Configuration {
         else if path.is_file() && path.ends_with("nico.config.json") {
             Ok(path.to_path_buf())
         } else {
-            Err(context.error(clap::error::ErrorKind::ValueValidation, format!("The supplied configuration file (must be either a directory containing `nico.config.json` or an existing `nico.config.json` file.")))
+            Err(crate::Error::ConfigNotFound)
         })?.canonicalize()?;
         let deserialized = serde_json::from_str::<Self>(&fs::read_to_string(config_path.clone())?)?;
         Ok(deserialized)

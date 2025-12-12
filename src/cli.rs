@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, ValueEnum, builder::PossibleValue};
 
 #[cfg(not(debug_assertions))]
@@ -22,6 +24,14 @@ pub struct Cli {
     #[cfg(not(debug_assertions))]
     #[command(flatten)]
     pub verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
+
+    /// Use a project outside of the current directory
+    /// Specify the project's root directory
+    #[arg(short, long)]
+    pub project: Option<PathBuf>,
+
+    #[arg(hide = true, long)]
+    pub ignore_project: bool,
 
     #[command(subcommand)]
     pub operation: Operations,
@@ -141,6 +151,9 @@ pub struct CompletionArgs {
     pub shell: Shell,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Args)]
+pub struct StatusArgs {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Subcommand)]
 pub enum Operations {
     /// Initializes a new configuration directory
@@ -148,4 +161,7 @@ pub enum Operations {
 
     /// Generate completions for the specified shell
     Completions(CompletionArgs),
+
+    /// Get project status
+    Status(StatusArgs)
 }

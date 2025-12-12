@@ -24,7 +24,10 @@ pub enum Error {
     MissingRuntimeDependency(String),
 
     #[error("Git operation error: {0}")]
-    Git(Arc<git2::Error>)
+    Git(Arc<git2::Error>),
+
+    #[error("This command needs to be run in the project's nix devshell (run `nix develop` in the project root)")]
+    OutsideShell
 }
 
 impl Error {

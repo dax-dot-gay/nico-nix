@@ -24,6 +24,7 @@
     let
       system = "{{init.system}}";
       pkgs = import nixpkgs { inherit system; };
+      nico-override-env = builtins.getEnv "NICO_OVERRIDE_ENV";
     in
     {
       nixosConfigurations = { };
@@ -33,6 +34,20 @@
           pkgs.sops
           #! {{resources.dev_packages}}
         ];
+
+        shellHook = if nico-override-env == "" then ''
+          flake_store_root="${builtins.toString ./.}"
+          if repo_root="$( \
+            2>/dev/null git rev-parse --show-toplevel \
+          )"; then
+            flake_root="$repo_root"
+          else
+            flake_root="$flake_store_root"
+          fi
+          export NICO_ENV="$flake_root"
+        '' else ''
+          export NICO_ENV="${nico-override-env}"
+        '';
       };
     };
 }

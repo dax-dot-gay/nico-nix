@@ -2,7 +2,7 @@ use crate::{
     cli::InitArgs,
     config::{Configuration, GitRemote},
     context::Context,
-    dispatch::Dispatcher,
+    dispatch::Dispatcher, repo::RepoExt,
 };
 use clap::error::ErrorKind;
 use git2::{
@@ -12,7 +12,7 @@ use git2::{
 use log::*;
 use std::{fs, path::PathBuf};
 
-fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, Vec<GitRemote>)> {
+fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, Vec<GitRemote>, Repository)> {
     let target_folder = args
         .clone()
         .path
@@ -39,11 +39,13 @@ fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, 
             Err(context.error(ErrorKind::ValueValidation, "Attempting to create a new local git repository, but the target directory already contains one."))?;
         }
 
-        let _ = Repository::init(target_folder.clone())?;
+        let repo = Repository::init(target_folder.clone())?;
+        repo.create_initial_commit()?;
 
         Ok((
             target_folder.clone(),
-            vec![GitRemote::builder("local", target_folder.to_str().unwrap().to_string()).build()]
+            vec![GitRemote::builder("local", target_folder.to_str().unwrap().to_string()).build()],
+            repo
         ))
     } else if let Some(git_clone) = args.git.clone.clone() {
         if target_folder.join(".git").exists() {
@@ -55,13 +57,14 @@ fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, 
         let mut fetch = FetchOptions::new();
         fetch.depth(0);
 
-        let _ = RepoBuilder::new()
+        let repo = RepoBuilder::new()
             .with_checkout(checkout)
             .fetch_options(fetch)
             .clone(&git_clone, target_folder.as_path())?;
         Ok((
             target_folder,
-            vec![GitRemote::builder("origin", git_clone).build()]
+            vec![GitRemote::builder("origin", git_clone).build()],
+            repo
         ))
     } else {
         if !target_folder.join(".git").exists() {
@@ -93,7 +96,7 @@ fn directory_setup(context: Context, args: InitArgs) -> crate::Result<(PathBuf, 
             }
         }
 
-        Ok((target_folder, remotes))
+        Ok((target_folder, remotes, repo))
     }
 }
 
@@ -101,7 +104,7 @@ pub struct InitDispatcher;
 impl Dispatcher for InitDispatcher {
     type Args = InitArgs;
     fn dispatch(context: Context, args: Self::Args) -> crate::Result<()> {
-        let (target_folder, remotes) = directory_setup(context.clone(), args.clone())?;
+        let (target_folder, remotes, repo) = directory_setup(context.clone(), args.clone())?;
 
         debug!(
             "Writing configuration to {:?}",
@@ -113,6 +116,9 @@ impl Dispatcher for InitDispatcher {
 
         let rendered = config.render_flake(context.clone())?;
         fs::write(target_folder.join("flake.nix"), rendered)?;
+
+        repo.add_files(["."])?;
+        repo.create_commit("Nico initialization")?;
 
         Ok(())
     }

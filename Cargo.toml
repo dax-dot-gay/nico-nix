@@ -9,6 +9,7 @@ bon = "3.8.1"
 clap = { version = "4.5.53", features = ["cargo", "derive", "env", "string"] }
 clap-verbosity-flag = { version = "3.0.4", features = ["serde"] }
 clap_complete = "4.5.61"
+colored = "3.0.0"
 env_logger = { version = "0.11.8", features = ["kv"] }
 git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-openssl", "vendored-libgit2"] }
 handlebars = "6.3.2"

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum, builder::PossibleValue};
 
 #[cfg(not(debug_assertions))]
-use clap_verbosity_flag::InfoLevel;
+use clap_verbosity_flag::ErrorLevel;
 
 #[cfg(debug_assertions)]
 use clap_verbosity_flag::TraceLevel;
@@ -23,7 +23,7 @@ pub struct Cli {
 
     #[cfg(not(debug_assertions))]
     #[command(flatten)]
-    pub verbosity: clap_verbosity_flag::Verbosity<InfoLevel>,
+    pub verbosity: clap_verbosity_flag::Verbosity<ErrorLevel>,
 
     /// Use a project outside of the current directory
     /// Specify the project's root directory
